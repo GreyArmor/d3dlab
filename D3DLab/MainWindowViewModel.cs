@@ -1,46 +1,85 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using D3DLab.Core;
-using D3DLab.Core.Components;
-using D3DLab.Core.Host;
-using D3DLab.Core.Viewport;
-using D3DLab.Core.Visual3D;
+﻿using D3DLab.Debugger;
+using D3DLab.Debugger.Modules.OBJFileFormat;
+using D3DLab.Debugger.Presentation.ScriptConsole;
+using D3DLab.Debugger.Presentation.SystemList;
 using D3DLab.Debugger.Windows;
-using D3DLab.Core.Test;
+using D3DLab.Parser;
+using D3DLab.Plugin.Contracts.Parsers;
+using D3DLab.Plugins;
+using D3DLab.Std.Engine.Core;
+using D3DLab.Std.Engine.Core.Ext;
+using D3DLab.Std.Engine.Core.MeshFormats;
+using D3DLab.Visualization;
+using D3DLab.Wpf.Engine.App;
+using D3DLab.Wpf.Engine.App.GameObjects;
+using D3DLab.Wpf.Engine.App.Host;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Numerics;
+using System.Threading;
+using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
-using D3DLab.Properties;
 
 namespace D3DLab {
-    public sealed class MainWindowViewModel {
-        private D3DEngine engine;
-        private readonly ViewportSubscriber subscriber;
+    public interface IDropFiles {
+        void Dropped(string[] files);
+    }
+   
+    public sealed class MainWindowViewModel : IDropFiles, IFileLoader {
 
-        public VisualTreeviewerPopup VisualTreeviewer { get; set; }
-        public ICommand LoadDuck { get; set; }
-        public I3DobjectLoader Loader { get { return engine; } }
-
-
-        public MainWindowViewModel() {
-            LoadDuck = new Command(this);
-            VisualTreeviewer = new VisualTreeviewerPopup();
-            subscriber = new ViewportSubscriber(this);
+        #region commands
+        class ClearConsoleOutputCommand : Debugger.BaseWPFCommand {
+            readonly MainWindowViewModel main;
+            public ClearConsoleOutputCommand(MainWindowViewModel main) { this.main = main; }
+            public override void Execute(object parameter) {
+                main.ClearConsole();
+            }
         }
 
-        public void Init(FormsHost host) {
-            engine = new D3DEngine(host);
-            engine.Notificator.Subscribe(subscriber);
+        class ShowAxisCommand : Debugger.BaseWPFCommand {
+            MainWindowViewModel main;
+            CoordinateSystemLinesGameObject gameObj;
 
-            VisualTreeviewer.Show();
+            bool isShowed;
+            public ShowAxisCommand(MainWindowViewModel main) {
+                this.main = main;
+                isShowed = true;
+            }
+
+            public override void Execute(object parameter) {
+                if (gameObj == null) {
+                    gameObj = CoordinateSystemLinesGameObject.Build(main.context.GetEntityManager());
+                    return;
+                }
+                if (isShowed) {
+                    gameObj.Hide(main.context.GetEntityManager());
+                } else {
+                    gameObj.Show(main.context.GetEntityManager());
+                }
+                isShowed = !isShowed;
+                main.ForceRender();
+            }
         }
-
-
-        private class Command : ICommand {
+        class MoveToCenterWorldCommand : Debugger.BaseWPFCommand {
             private MainWindowViewModel main;
 
-            public Command(MainWindowViewModel mainWindowViewModel) {
+            public MoveToCenterWorldCommand(MainWindowViewModel main) {
+                this.main = main;
+            }
+
+            public override void Execute(object parameter) {
+                main.scene.Window.InputManager.PushCommand(new Std.Engine.Core.Input.Commands.ToCenterWorldCommand());
+            }
+        }
+        class LoadCommand : ICommand {
+            private MainWindowViewModel main;
+
+            public LoadCommand(MainWindowViewModel mainWindowViewModel) {
                 this.main = mainWindowViewModel;
             }
 
@@ -52,28 +91,292 @@ namespace D3DLab {
             }
 
             public void Execute(object parameter) {
-                main.Loader.LoadObj(this.GetType().Assembly.GetManifestResourceStream("D3DLab.Resources.ducky.obj"));
+
+                // var file = this.GetType().Assembly.GetManifestResourceStream("D3DLab.Resources.ducky.obj");
+
+                //main.plugins.Import();
+
+                //   var path = @"D:\Storage_D\trash\3d\SharpDX-Rastertek-Tutorials-master\SharpDXWinForm\Externals\Models\skydome.txt";
+
+                //main.items.ForEach(i=> i.GameObj.Cleanup(main.context.GetEntityManager()));
+                //main.items.Clear();               
+
+                main.items.Add(new LoadedItem(main, SkyGameObject.Create(main.context.GetEntityManager())));
+                main.items.Add(new LoadedItem(main, TerrainGameObject.Create(main.context.GetEntityManager())));
+
+                var obj = AnimCMOObject.Create(main.context.GetEntityManager());
+                main.items.Add(new LoadedItem(main, obj));
             }
         }
-    }
+        public class RenderModeSwitherCommand : Debugger.BaseWPFCommand<Debugger.Infrastructure.IVisualTreeEntityItem> {
+            readonly IContextState context;
 
-    public sealed class ViewportSubscriber : IViewportChangeSubscriber<Entity>, IViewportRenderSubscriber {
-        private readonly MainWindowViewModel mv;
-
-        public ViewportSubscriber(MainWindowViewModel mv) {
-            this.mv = mv;
+            public RenderModeSwitherCommand(IContextState context) {
+                this.context = context;
+            }
+            public override void Execute(Debugger.Infrastructure.IVisualTreeEntityItem item) {
+                var tag = item.Name;
+                //var sw = new EntityRenderModeSwither(context.GetEntityManager().GetEntity(tag));
+                //sw.TurnOn(EntityRenderModeSwither.Modes.BoundingBox);
+            }
         }
 
-        public void Add(Entity entity) {
-            App.Current.Dispatcher.BeginInvoke(new Action(() => {
-                mv.VisualTreeviewer.ViewModel.Add(entity);
-            }));
+        #endregion
+
+        #region items
+
+        public class LoadedItem {
+            public ICommand OpenProperties { get; }
+            public ICommand VisiblityChanged { get; }
+            public ICommand ShowDebuggingVisualization { get; }
+            public ICommand LookAt { get; }
+            public string Header { get { return GameObj.Description; } }
+
+            public LoadedItem() { }
+
+            public GameObject GameObj { get; protected set; }
+            protected readonly MainWindowViewModel main;
+
+            public LoadedItem(MainWindowViewModel main, GameObject gobj) {
+                this.main = main;
+                this.GameObj = gobj;
+                VisiblityChanged = new Command(this);
+                ShowDebuggingVisualization = new WpfActionCommand<bool?>(OnShowDebugVisualization);
+                LookAt = new WpfActionCommand(OnLookAt);
+                OpenProperties = new WpfActionCommand(OnOpenProperties);
+            }
+
+            protected virtual void OnOpenProperties() {
+                      
+            }
+
+            private void OnLookAt() {
+                GameObj.LookAtSelf(main.context.GetEntityManager());
+                main.ForceRender();
+            }
+
+            void OnShowDebugVisualization(bool? ischecked) {
+                if (ischecked.HasValue && ischecked.Value) {
+                    GameObj.ShowDebugVisualization(main.context.GetEntityManager());
+                } else {
+                    GameObj.HideDebugVisualization(main.context.GetEntityManager());
+                }
+                main.ForceRender();
+            }
+
+            public override string ToString() {
+                return GameObj.ToString();
+            }
+
+            private void Hide() {
+                GameObj.Hide(main.context.GetEntityManager());
+                main.ForceRender();
+            }
+
+            private void Show() {
+                GameObj.Show(main.context.GetEntityManager());
+                main.ForceRender();
+            }
+
+            class Command : Debugger.BaseWPFCommand<bool> {
+                private LoadedItem item;
+
+                public Command(LoadedItem item) {
+                    this.item = item;
+                }
+
+                public override void Execute(bool _checked) {
+                    if (_checked) {
+                        item.Show();
+                    } else {
+                        item.Hide();
+                    }
+
+                }
+            }
         }
 
-        public void Render() {
-            App.Current.Dispatcher.BeginInvoke(new Action(() => {
-                mv.VisualTreeviewer.ViewModel.Refresh();
-            }));
+        
+
+        public class ImportFileLoadedItem : LoadedItem {
+            readonly ImportFileInfo info;
+            readonly FileSystemWatcher watcher;
+            readonly ManualResetEventSlim reset;
+            readonly string tempFileName;
+            readonly CompositeGameObjectFromFile compositeGameObject;
+            public ImportFileLoadedItem(MainWindowViewModel main, ImportFileInfo info) : base(main, null) {
+                this.info = info;
+                reset = new ManualResetEventSlim(true);
+                tempFileName = Path.ChangeExtension(info.File.FullName, ".temp");
+                File.Delete(tempFileName);
+                //
+                var bl = new GameObjectBuilder(main.context.GetEntityManager());
+                compositeGameObject = bl.Build(info.File, info.Parser);
+
+                base.GameObj = compositeGameObject;
+                //
+                watcher = new FileSystemWatcher(info.File.DirectoryName, "*" + Path.GetExtension(info.File.Name));
+                watcher.EnableRaisingEvents = true;
+                watcher.Changed += OnFileChanged;
+            }
+
+            protected override void OnOpenProperties() {
+                main.OpenObjDetailsWin(compositeGameObject);
+            }
+
+            DateTime lastWriteTime;
+            private void OnFileChanged(object sender, FileSystemEventArgs e) {
+                var lastTime = File.GetLastWriteTime(info.File.FullName);
+                if (e.FullPath == info.File.FullName && lastWriteTime < lastTime) {                    
+                    Thread.Sleep(100);
+                    //reset.Wait();
+                    //reset.Reset();
+                    Stream stream = null;
+                    var tries = 3;
+                    while (tries --> 0) {
+                        try {
+                            File.Copy(info.File.FullName, tempFileName, true);
+                            stream = File.OpenRead(tempFileName);
+                            //using (var readed = File.OpenRead(temp)) {
+                            //stream = new MemoryStream();
+                            //readed.CopyTo(stream);
+                            //stream.Position = 0;
+                            //}                            
+                            lastWriteTime = lastTime;
+                            break;
+                        } catch {
+                            Thread.Sleep(100);
+                        }
+                    }
+                    if (stream.IsNull()) {
+                        return;
+                    }
+
+                    System.Diagnostics.Trace.WriteLine($"Reload [{info.File.FullName}]");
+
+                    try {
+                        compositeGameObject.Cleanup(main.context.GetEntityManager());
+
+                        var rbl = new GameObjectReBuilder(compositeGameObject, main.context.GetEntityManager());
+                        rbl.Build(stream, info.Parser);
+                    } catch (Exception ex) {
+                        System.Diagnostics.Trace.WriteLine($"Error [{ex.Message}]");
+                    } finally {
+                        stream.Dispose();
+                        //reset.Set();
+                    }
+                }
+            }
         }
-    }
+
+        #endregion
+
+        private SceneView scene;
+        private readonly EngineNotificator notificator;
+        ContextStateProcessor context;
+
+        public VisualTreeviewerViewModel VisualTreeviewer { get; }
+        public SystemViewPresenter SystemsView { get; }
+        public ScriptsConsoleVM ScriptsConsole { get; }
+
+        public ICommand LoadDuck { get; set; }
+        public ICommand MoveToCenterWorld { get; }
+        public ICommand ShowAxis { get; }
+        public ICommand ClearConsoleOutput { get; }
+        
+
+
+        public ICollectionView Items { get; set; }
+        public ObservableCollection<string> ConsoleOutput { get; }
+        readonly ObservableCollection<LoadedItem> items;
+        readonly PluginImporter plugins;
+        readonly PrimitiveDrawer primitiveDrawer;
+
+        public MainWindowViewModel() {
+            LoadDuck = new LoadCommand(this);
+            MoveToCenterWorld = new MoveToCenterWorldCommand(this);
+            ShowAxis = new ShowAxisCommand(this);
+            ClearConsoleOutput = new ClearConsoleOutputCommand(this);
+
+            primitiveDrawer = new PrimitiveDrawer();
+
+            VisualTreeviewer = new VisualTreeviewerViewModel();
+            SystemsView = new SystemViewPresenter();
+            ScriptsConsole = new ScriptsConsoleVM(primitiveDrawer);
+
+            items = new ObservableCollection<LoadedItem>();
+            Items = CollectionViewSource.GetDefaultView(items);
+            notificator = new EngineNotificator();
+
+            notificator.Subscribe(new ViewportSubscriber(this));
+
+            plugins = new PluginImporter();
+            ConsoleOutput = new ObservableCollection<string>();
+            System.Diagnostics.Trace.Listeners.Add(new TraceOutputListener(ConsoleOutput, App.Current.Dispatcher));
+
+            //new Debugger.Modules.Obj.ObjDetailsWindow().Show();
+        }
+
+        public void Init(FormsHost host, FrameworkElement overlay) {
+            context = new ContextStateProcessor();
+            context.AddState(0, x => new GenneralContextState(x, notificator));
+
+            context.SwitchTo(0);
+
+            scene = new SceneView(host, overlay, context, notificator);
+            scene.RenderStarted += OnRenderStarted;
+
+            primitiveDrawer.SetContext(context);
+
+            VisualTreeviewer.RenderModeSwither = new RenderModeSwitherCommand(context);
+        }
+
+
+        private void OnRenderStarted() {
+            VisualTreeviewer.GameWindow = scene.Window;
+            SystemsView.GameWindow = scene.Window;
+
+            var manager = context.GetEntityManager();
+            //
+            items.Add(new LoadedItem(this, CameraGameObject.Create(context)));
+            items.Add(new LoadedItem(this, LightGameObject.CreateAmbientLight(manager)));
+            items.Add(new LoadedItem(this, LightGameObject.CreatePointLight(manager, Vector3.Zero + Vector3.UnitZ * 1000)));
+            items.Add(new LoadedItem(this, LightGameObject.CreateDirectionLight(manager, new Vector3(1, 4, 4).Normalized())));
+
+        }
+
+        public void Dropped(string[] files) {
+            plugins.Import();
+            var win = new ChooseParseWindow();
+            win.ViewModel.AddFiles(files);
+            win.ViewModel.AddParsers(plugins.ParserPlugins);
+            win.ViewModel.SetLoader(this);
+            win.ShowDialog();
+        }
+
+        public void Load(ImportFileInfo info) {
+            items.Add(new ImportFileLoadedItem(this, info));
+        }
+
+        void ForceRender() {
+            scene.Window.InputManager.PushCommand(new Std.Engine.Core.Input.Commands.ForceRenderCommand());
+        }
+
+        void ClearConsole() {
+            ConsoleOutput.Clear();
+        }
+
+        #region windows
+
+        void OpenObjDetailsWin(CompositeGameObjectFromFile gobj) {
+            ObjDetailsPopup.Open(gobj, context.GetEntityManager());
+        }
+
+        void ObjDetailsRefreshEntity(IEnumerable<ObjGroupsViewModel.ColorFilterViewItem> obj) {
+        
+        }
+
+
+        #endregion
+    }   
 }

@@ -1,0 +1,281 @@
+﻿<?xml version="1.0"?>
+<SyntaxDefinition name="C#" extensions=".cs" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+  <!-- The named colors 'Comment' and 'String' are used in SharpDevelop to detect if a line is inside a multiline string/comment -->
+  <Color name="Comment"                 foreground="#57A64A"     fontWeight="normal"   exampleText="// comment" />
+  <Color name="String"                  foreground="#D69D85"     fontWeight="normal"   exampleText="string text = &quot;Hello, World!&quot;"/>
+  <Color name="StringInterpolation"     foreground="#FFFFFFFF"     fontWeight="normal"   exampleText="string text = $&quot;Hello, {name}!&quot;"/>
+  <Color name="Char"                    foreground="#D69D85"     fontWeight="normal"   exampleText="char linefeed = '\n';"/>
+  <Color name="Preprocessor"            foreground="#FF938A74"     fontWeight="normal"   exampleText="#region Title" />
+  <Color name="ValueTypeKeywords"       foreground="#569CD6"     fontWeight="normal"   exampleText="bool b = true;" />
+  <Color name="ReferenceTypeKeywords"   foreground="#FFD02442"     fontWeight="normal"   exampleText="object o;" />
+  <Color name="MethodCall"              foreground="#FFFFFFFF"     fontWeight="normal"   exampleText="o.ToString();"/>
+  <Color name="NumberLiteral"           foreground="#B5CEA8"     fontWeight="normal"   exampleText="3.1415f"/>
+  <Color name="ThisOrBaseReference"     foreground="#FFD02442"     fontWeight="normal"   exampleText="this.Do(); base.Do();"/>
+  <Color name="NullOrValueKeywords"     foreground="#FFD02442"     fontWeight="normal"   exampleText="if (value == null)"/>
+  <Color name="Keywords"                foreground="#569CD6"     fontWeight="normal"   exampleText="if (a) {} else {}"/>
+  <Color name="GotoKeywords"            foreground="#569CD6"     fontWeight="normal"   exampleText="continue; return null;"/>
+  <Color name="ContextKeywords"         foreground="#569CD6"     fontWeight="normal"   exampleText="var a = from x in y select z;"/>
+  <Color name="ExceptionKeywords"       foreground="#FFD02442"     fontWeight="normal"   exampleText="try {} catch {} finally {}"/>
+  <Color name="CheckedKeyword"          foreground="#FFD02442"     fontWeight="normal"   exampleText="checked {}"/>
+  <Color name="UnsafeKeywords"          foreground="#FFD02442"     fontWeight="normal"   exampleText="#FFD02442 { fixed (..) {} }"/>
+  <Color name="OperatorKeywords"        foreground="#569CD6"     fontWeight="normal"   exampleText="public static implicit operator..."/>
+  <Color name="ParameterModifiers"      foreground="#569CD6"     fontWeight="normal"   exampleText="(ref int a, params int[] b)"/>
+  <Color name="Modifiers"               foreground="#FFD02442"     fontWeight="normal"   exampleText="static readonly int a;"/>
+  <Color name="Visibility"              foreground="#FFD02442"     fontWeight="normal"   exampleText="public override void ToString();"/>
+  <Color name="NamespaceKeywords"       foreground="#FF938A74"     fontWeight="normal"   exampleText="namespace A.B { using System; }"/>
+  <Color name="GetSetAddRemove"         foreground="#FFD02442"     fontWeight="normal"   exampleText="int Prop { get; set; }"/>
+  <Color name="TrueFalse"               foreground="#FFD02442"     fontWeight="normal"   exampleText="b = false; a = true;" />
+  <Color name="TypeKeywords"            foreground="#569CD6"     fontWeight="normal"   exampleText="if (x is int) { a = x as int; type = typeof(int); size = sizeof(int); c = new object(); }"/>
+  <Color name="SemanticKeywords"        foreground="#FFD02442"     fontWeight="normal"   exampleText="if (args == null) throw new ArgumentNullException(nameof(args));" />
+  <Color name="Punctuation"                                                              exampleText="a(b.c);" />
+
+  <Property name="DocCommentMarker" value="///" />
+
+  <RuleSet name="CommentMarkerSet">
+    <Keywords fontWeight="bold">
+      <Word>TODO</Word>
+      <Word>FIXME</Word>
+    </Keywords>
+    <Keywords fontWeight="bold">
+      <Word>HACK</Word>
+      <Word>UNDONE</Word>
+    </Keywords>
+  </RuleSet>
+
+  <!-- This is the main ruleset. -->
+  <RuleSet>
+    <Span color="Preprocessor">
+      <Begin>\#</Begin>
+      <RuleSet name="PreprocessorSet">
+        <Span>
+          <!-- preprocessor directives that allows comments -->
+          <Begin>
+            (define|undef|if|elif|else|endif|line)\b
+          </Begin>
+          <RuleSet>
+            <Span color="Comment" ruleSet="CommentMarkerSet">
+              <Begin>//</Begin>
+            </Span>
+          </RuleSet>
+        </Span>
+        <Span>
+          <!-- preprocessor directives that don't allow comments -->
+          <Begin>
+            (region|endregion|error|warning|pragma|include)\b
+          </Begin>
+        </Span>
+      </RuleSet>
+    </Span>
+
+    <Span color="Comment">
+      <Begin color="XmlDoc/DocComment">///(?!/)</Begin>
+      <RuleSet>
+        <Import ruleSet="XmlDoc/DocCommentSet"/>
+        <Import ruleSet="CommentMarkerSet"/>
+      </RuleSet>
+    </Span>
+
+    <Span color="Comment" ruleSet="CommentMarkerSet">
+      <Begin>//</Begin>
+    </Span>
+
+    <Span color="Comment" ruleSet="CommentMarkerSet" multiline="true">
+      <Begin>/\*</Begin>
+      <End>\*/</End>
+    </Span>
+
+    <Span color="String">
+      <Begin>"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <!-- span for escape sequences -->
+        <Span begin="\\" end="."/>
+      </RuleSet>
+    </Span>
+
+    <Span color="Char">
+      <Begin>'</Begin>
+      <End>'</End>
+      <RuleSet>
+        <!-- span for escape sequences -->
+        <Span begin="\\" end="."/>
+      </RuleSet>
+    </Span>
+
+    <Span color="String" multiline="true">
+      <Begin>@"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <!-- span for escape sequences -->
+        <Span begin='""' end=""/>
+      </RuleSet>
+    </Span>
+
+    <Span color="String">
+      <Begin>\$"</Begin>
+      <End>"</End>
+      <RuleSet>
+        <!-- span for escape sequences -->
+        <Span begin="\\" end="."/>
+        <Span begin="\{\{" end=""/>
+        <!-- string interpolation -->
+        <Span begin="{" end="}" color="StringInterpolation" ruleSet=""/>
+      </RuleSet>
+    </Span>
+
+    <!-- don't highlight "@int" as keyword -->
+    <Rule>
+      @[\w\d_]+
+    </Rule>
+
+    <Keywords color="ThisOrBaseReference">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="TypeKeywords">
+      <Word>mul</Word>
+      <Word>register</Word>
+      <Word>dot</Word>
+      <Word>pow</Word>
+      <Word>saturate</Word>
+      <Word>abs</Word>
+      <Word>normalize</Word>
+      <Word>lerp</Word>      
+    </Keywords>
+
+    <Keywords color="TrueFalse">
+      <Word>true</Word>
+      <Word>false</Word>
+    </Keywords>
+
+    <Keywords color="Keywords">
+      <Word>else</Word>
+      <Word>if</Word>
+      <Word>switch</Word>
+      <Word>case</Word>
+      <Word>do</Word>
+      <Word>for</Word>
+      <Word>while</Word>
+      <Word>const</Word>
+      <Word>static</Word>
+    </Keywords>
+
+    <Keywords color="GotoKeywords">
+      <Word>break</Word>
+      <Word>continue</Word>
+      <Word>return</Word>
+    </Keywords>
+
+    <Keywords color="ContextKeywords">
+      <Word>struct</Word>
+      <Word>cbuffer</Word>
+      <Word>global</Word>
+      <Word>Texture2D</Word>
+      <Word>SamplerState</Word>
+      
+    </Keywords>
+
+    <Keywords color="ExceptionKeywords">
+      <Word>try</Word>
+      <Word>catch</Word>
+      <Word>finally</Word>
+    </Keywords>
+
+    <Keywords color="CheckedKeyword">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="UnsafeKeywords">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="ValueTypeKeywords">
+      <Word>bool</Word>
+      <Word>int</Word>
+      <Word>float</Word>
+      <Word>float2</Word>
+      <Word>float3</Word>
+      <Word>float4</Word>
+      <Word>float4x4</Word>
+      <Word>float2x2</Word>
+      <Word>float3x3</Word>
+    </Keywords>
+
+    <Keywords color="ReferenceTypeKeywords">
+      <Word>TriangleStream</Word>
+      <Word>LineStream</Word>
+      <Word>StructuredBuffer</Word>
+      <Word>void</Word>      
+    </Keywords>
+
+    <Keywords color="OperatorKeywords">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="ParameterModifiers">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="Modifiers">
+      <Word>inout</Word>
+      <Word>triangle</Word>
+      <Word>noperspective</Word>
+      <Word>line</Word>
+      <Word>point</Word>
+      <Word>lineadj</Word>     
+    </Keywords>
+
+    <Keywords color="Visibility">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="NamespaceKeywords">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="GetSetAddRemove">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="NullOrValueKeywords">
+      <Word>this</Word>
+    </Keywords>
+
+    <Keywords color="SemanticKeywords">
+      <Word>COLOR</Word>
+      <Word>SV_Position</Word>
+      <Word>SV_POSITION</Word>
+      <Word>POSITION</Word>
+      <Word>TEXCOORD</Word>
+      <Word>NORMAL</Word>
+      <Word>TANGENT</Word>
+      <Word>BINORMAL</Word>
+      <Word>TEXCOORD0</Word>
+      <Word>TEXCOORD1</Word>
+      <Word>TEXCOORD2</Word>
+      <Word>TEXCOORD3</Word>
+      <Word>SV_TARGET</Word>
+    </Keywords>
+
+    <!-- Mark previous rule-->
+    <Rule color="MethodCall">
+      \b
+      [\d\w_]+  # an identifier
+      (?=\s*\() # followed by (
+    </Rule>
+
+    <!-- Digits -->
+    <Rule color="NumberLiteral">
+      \b0[xX][0-9a-fA-F]+  # hex number
+      |
+      (	\b\d+(\.[0-9]+)?   #number with optional floating point
+      |	\.[0-9]+           #or just starting with floating point
+      )
+      ([eE][+-]?[0-9]+)? # optional exponent
+    </Rule>
+
+    <Rule color="Punctuation">
+      [?,.;()\[\]{}+\-/%*&lt;&gt;^+~!|&amp;]+
+    </Rule>
+  </RuleSet>
+</SyntaxDefinition>

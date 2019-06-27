@@ -4,6 +4,7 @@
              xmlns:local="clr-namespace:D3DLab"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+
         <ResourceDictionary Source="Resources/Theme.xaml"/>
     </Application.Resources>
 </Application>

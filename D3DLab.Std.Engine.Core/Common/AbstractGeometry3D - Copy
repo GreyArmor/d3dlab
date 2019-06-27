@@ -1,0 +1,228 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
+using System.Threading.Tasks;
+using D3DLab.Std.Engine.Core.MeshFormats;
+using g3;
+
+namespace D3DLab.Std.Engine.Core.Common {
+    public abstract class ReadOnlyList<T> where T : struct {
+        public T this[int index] {
+            get { return array[index]; }
+            set { array[index] = value; }
+        }
+        public int Count => array.Length;
+
+        readonly T[] array;
+        protected ReadOnlyList(T[] vectors) {
+            this.array = vectors;
+        }
+        protected ReadOnlyList(int length) {
+            this.array = new T[length];
+        }
+
+        public IEnumerator<T> GetEnumerator() {
+            return array.ToList().GetEnumerator();
+        }
+
+        public static implicit operator List<T>(ReadOnlyList<T> d) {
+            return d.array.ToList();
+        }
+    }
+    public class Vector4Collection : ReadOnlyList<Vector4> {
+        public Vector4Collection(List<Vector4> vectors) : base(vectors.ToArray()) {
+        }
+    }
+    public class Vector3Collection : ReadOnlyList<Vector3> {
+        public Vector3Collection(List<Vector3> vectors) : base(vectors.ToArray()) { }
+        public Vector3Collection(int length) : base(length) { }
+    }
+    public class Vector2Collection : ReadOnlyList<Vector2> {
+        public Vector2Collection(List<Vector2> vectors) : base(vectors.ToArray()) {
+        }
+    }
+    public class IntCollection : ReadOnlyList<int> {
+        public IntCollection(List<int> vectors) : base(vectors.ToArray()) {
+        }
+    }
+
+    public class GroupGeometry3D {
+        public IReadOnlyCollection<PartGeometry3D> Parts => groupsmap.Values;
+        public IReadOnlyCollection<Vector3> Positions => positions.AsReadOnly();
+        public IReadOnlyCollection<int> Indices => indices.AsReadOnly();
+
+        internal readonly Dictionary<Vector3, int> mapper;
+        internal readonly Dictionary<int, PartGeometry3D> posIndexToPartMapper;
+        readonly Dictionary<string, PartGeometry3D> groupsmap;
+        internal readonly List<Vector3> positions;
+        internal readonly List<int> indices;
+
+        public GroupGeometry3D() {
+            posIndexToPartMapper = new Dictionary<int, PartGeometry3D>();
+            mapper = new Dictionary<Vector3, int>();
+            positions = new List<Vector3>();
+            indices = new List<int>();
+            groupsmap = new Dictionary<string, PartGeometry3D>();
+        }
+
+        public PartGeometry3D CreatePart(string key, string fullName) {
+            if(!groupsmap.TryGetValue(key, out var p)) {
+                p = new PartGeometry3D(this, key);
+                groupsmap.Add(key, p);
+            }
+            p.Groups.Add(new ObjGroup(fullName));
+            return p;
+        }
+
+        public void Fixed() {
+            posIndexToPartMapper.Clear();
+            mapper.Clear();
+            foreach(var kv in groupsmap.Values.ToList()) {
+                if (kv.IsEmpty) {
+                    groupsmap.Remove(kv.Key);
+                }
+            }
+        }
+
+        public PartGeometry3D GetGroupByPosIndexes(IList<int> ind, string fullName) {
+            var gr = posIndexToPartMapper[ind[0]];
+            gr.Groups.Add(new ObjGroup(fullName));
+            return gr;
+        }
+    }
+
+    public class ObjGroup {
+        public ObjGroupInfo PosGroupInfo;
+        public ObjGroupInfo IndxGroupInfo;
+        public readonly string Name;
+        public ObjGroup(string name) {
+            Name = name;
+        }
+    }
+
+    public class PartGeometry3D {
+        public IReadOnlyCollection<Vector3> Positions => mapper.Keys;
+        public IReadOnlyCollection<int> Indices => indices.AsReadOnly();
+
+        public bool IsEmpty => mapper.Count == 0 && indices.Count == 0;
+
+        readonly List<int> indices;
+        readonly Dictionary<Vector3, int> mapper;
+        readonly GroupGeometry3D full;
+        internal readonly string Key;
+
+        public List<ObjGroup> Groups;
+
+        public PartGeometry3D(GroupGeometry3D group, string key) {
+            mapper = new Dictionary<Vector3, int>();
+            indices = new List<int>();
+            this.full = group;
+            this.Key = key;
+            Groups = new List<ObjGroup>();
+        }
+
+        public void AddPosition(ref Vector3 v) {
+            var group = Groups.Last();
+            var index = full.mapper.Count;
+            
+            if (full.mapper.ContainsKey(v)) {
+                index = full.mapper[v];
+            } else {
+                full.mapper.Add(v, index);
+                full.positions.Add(v);
+            }
+
+            if (group.PosGroupInfo == null) {
+                group.PosGroupInfo = new ObjGroupInfo {
+                    Name = group.Name,
+                    StartIndex = index,
+                };
+            }
+
+            group.PosGroupInfo.Count += 1;
+            mapper.Add(v, mapper.Count);
+
+            full.posIndexToPartMapper.Add(index, this);
+
+            //if(new HashSet<Vector3>(full.positions).Count != full.positions.Count) {
+
+            //}
+        }
+
+        public bool TryAddTriangle(IList<int> ind) {
+            var group = Groups.Last();
+            var val = new HashSet<int>();
+            var vv = new HashSet<Vector3>();
+
+            if(Key == "A ID14 NID0 LT02c2 LL0a000000") {
+
+            }
+
+            if (ind.Any(i=> !mapper.ContainsKey(full.positions[i]))) {
+                //AddPosition(ref v);
+                return false;
+            }
+
+            for (var i=0;i< ind.Count; ++i) {
+                try {
+                    var index = ind[i];
+                    var v = full.positions[index];
+
+                    if (group.IndxGroupInfo == null) {
+                        group.IndxGroupInfo = new ObjGroupInfo {
+                            Name = group.Name,
+                            StartIndex = index,
+                            Count = 1
+                        };
+                    } else {
+                        group.IndxGroupInfo.Count += 1;
+                    }
+                    full.indices.Add(index);
+                    indices.Add(mapper[v]);
+                    val.Add(mapper[v]);
+                    vv.Add(v);
+                } catch(Exception ex) {
+                    ex.ToString();
+                    return false;
+                }
+            }
+            if (val.Count != 3 || vv.Count != 3 ) {
+
+            }
+
+            return true;
+        }
+    }
+
+    public class AbstractGeometry3D {
+        public List<Vector3> Positions { get; set; }
+        public List<Vector3> Normals { get; set; }
+        public List<Vector3> Tangents { get; set; }
+        public List<Vector3> BiTangents { get; set; }
+        public List<Vector4> Colors { get; set; }
+        public List<Vector2> TextureCoordinates { get; set; }
+        public List<int> Indices { get; set; }
+
+        public Vector4 Color { get; set; }
+
+
+
+        public AbstractGeometry3D() {
+            Colors = new List<Vector4>();
+            Positions = new List<Vector3>();
+            Normals = new List<Vector3>();
+            TextureCoordinates = new List<Vector2>();
+            Indices = new List<int>();
+        }
+
+
+        public override string ToString() {
+            return $"[Positions:{Positions.Count};Indices:{Indices.Count}]";
+        }
+
+
+
+    }
+}

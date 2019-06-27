@@ -1,23 +1,32 @@
-﻿using D3DLab.Core.Test;
-using D3DLab.Debugger.Windows;
+﻿using D3DLab.Std.Engine.Core.Ext;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.CodeAnalysis.Scripting.Hosting;
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Numerics;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace D3DLab.Debugger {
     public class ScriptEnvironment {
         public dynamic CurrentWatch { get; set; }
     }
+    public interface IPrimitiveDrawer {
+        void poly(params Vector3[] points);
+        void point(params Vector3[] points);
+        void point(float radius, params Vector3[] points);
+        void arrow(Vector3 start, Vector3 direction);
+    }
+
 
     public sealed class ScriptExetuter {
-        public ScriptExetuter() {
+        const string namaspaces = "using System;using ;";
+        readonly IPrimitiveDrawer drawer;
 
+        public event Action<string> Output;
+
+        public ScriptExetuter(IPrimitiveDrawer drawer) {
+            this.drawer = drawer;
         }
         public Task<object> Execute(ScriptEnvironment environment, string code) {
             return CSharpScript.EvaluateAsync(code,
@@ -30,6 +39,32 @@ namespace D3DLab.Debugger {
                globals: environment);
         }
         public void Execute1(ScriptEnvironment environment, string code) {
+
+            var imports = new[] {
+                "System",
+                "System.Numerics",
+                "System.ValueTuple",
+            };
+            var asemblyis = new[] {
+                typeof(System.Numerics.Vector2).Assembly,
+               // typeof(System.ValueTuple).Assembly,
+            };
+          //  code = namaspaces + code;// "DrawPoint(new Vector3())";// "var sqrt = System.Math.Sqrt(2);var point = new []{ new Vector3(), new Vector3()};";
+            try {
+                CSharpScript.RunAsync(code, ScriptOptions.Default.WithImports(imports).WithReferences(asemblyis), drawer, drawer.GetType())
+                    .ContinueWith(x => {
+                        var res = x.Result;
+                        var vars = res.Variables;
+                        res.ReturnValue.Do(val => {
+                            Output?.Invoke(val.ToString());
+                        });
+
+                    });
+            } catch (Exception ex) {
+                Output?.Invoke(ex.Message);
+            }
+        }
+        public void Execute2(ScriptEnvironment environment, string code) {
             //IEntityComponent propery = new VisualProperty();
 
             //            Clipboard.SetDataObject()

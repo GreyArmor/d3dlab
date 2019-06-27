@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Animation\Shaders\Animation.hlsl" />
+    <None Remove="Animation\Shaders\Common.hlsl" />
+    <None Remove="Rendering\Shaders\Custom\colored_vertex.hlsl" />
+    <None Remove="Rendering\Shaders\Custom\Lines.hlsl" />
+    <None Remove="Rendering\Shaders\Custom\sphere_point.hlsl" />
+    <None Remove="Rendering\Shaders\Game.hlsl" />
+    <None Remove="Rendering\Shaders\Light.hlsl" />
+    <None Remove="Rendering\Shaders\Math.hlsl" />
+    <None Remove="Rendering\Shaders\Quaternion.hlsl" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Animation\Shaders\Animation.hlsl" />
+    <EmbeddedResource Include="Animation\Shaders\Common.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Custom\colored_vertex.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Custom\sphere_point.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Custom\Lines.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Game.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Light.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Math.hlsl" />
+    <EmbeddedResource Include="Rendering\Shaders\Quaternion.hlsl" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SharpDX" Version="4.1.0" />
+    <PackageReference Include="SharpDX.D3DCompiler" Version="4.1.0" />
+    <PackageReference Include="SharpDX.Direct2D1" Version="4.1.0" />
+    <PackageReference Include="SharpDX.Direct3D11" Version="4.1.0" />
+    <PackageReference Include="SharpDX.Direct3D11.Effects" Version="4.1.0" />
+    <PackageReference Include="SharpDX.DXGI" Version="4.1.0" />
+    <PackageReference Include="SharpDX.Mathematics" Version="4.1.0" />
+    <PackageReference Include="System.Buffers" Version="4.5.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\D3DLab.Std.Engine.Core\D3DLab.Std.Engine.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Tests\Line\line-fragment.hlsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Tests\Line\line-geometry.hlsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Tests\Line\line-vertex.hlsl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

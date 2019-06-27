@@ -4,36 +4,20 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:D3DLab.Debugger.Windows"
-        mc:Ignorable="d"
-        Title="VisualTreeviewer" Height="300" Width="800">
+        xmlns:model="clr-namespace:D3DLab.Debugger.Model"
+        Background="#080808"
+        mc:Ignorable="d" Title="{Binding Title}" x:Name="win"
+        Height="600" Width="600">
     <Window.Resources>
         <local:VisualTreeviewerViewModel x:Key="ViewModel" />
-        <DataTemplate DataType="{x:Type local:VisualProperty}">
-            <StackPanel Orientation="Vertical">
-                <TextBlock Text="{Binding Name}"/>
-                <TextBlock Text="{Binding Value}"/>
-            </StackPanel>
-        </DataTemplate>
     </Window.Resources>
+
     <Window.DataContext>
         <StaticResource ResourceKey="ViewModel" />
     </Window.DataContext>
-    <!--<StackPanel Orientation="Vertical" VerticalAlignment="Stretch">-->
-        <TreeView Name="trvMenu" ItemsSource="{Binding Items}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-            <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate ItemsSource="{Binding Components}">
-                    <TextBlock Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
-                </HierarchicalDataTemplate>
-            </TreeView.ItemTemplate>
-        </TreeView>
-        <!-- component properties
-        <ContentControl Content="{Binding SelectedComponent}"/>
-        <Button Content="Add Component"/>
-        <TextBox Text="{Binding ConsoleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-            KeyUp="TextBox_KeyUp"
-            TextWrapping="Wrap"
-            AcceptsReturn="True"
-            HorizontalScrollBarVisibility="Disabled"
-            VerticalScrollBarVisibility="Auto"/> -->
-    <!--</StackPanel>-->
+
+    <local:TreeViewerElement x:Name="tree"/>
+
+   
+
 </Window>

@@ -1,0 +1,30 @@
+﻿<Popup x:Class="D3DLab.Debugger.IDE.IntellisensePopup"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:D3DLab.Debugger.IDE"
+             mc:Ignorable="d" MinWidth="150">
+    <Popup.Resources>
+    </Popup.Resources>
+    <ListBox ItemsSource="{Binding Items}" x:Name="ListBoxEle"
+             Background="Black" Foreground="White"
+             BorderThickness="0" BorderBrush="Transparent"
+             IsSynchronizedWithCurrentItem="True">
+        <ListBox.ItemContainerStyle>
+            <Style TargetType="ListBoxItem">
+                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OnListBoxItemMouseLeftButtonDown" />
+                <EventSetter Event="PreviewKeyDown" Handler="OnListBoxItemKeyDown" />
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True" >
+                        <Setter Property="Background" Value="Blue" />
+                        <Setter Property="Foreground" Value="White" />
+                    </Trigger>
+                </Style.Triggers>
+                <!--<Style.Resources>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
+                </Style.Resources>-->
+            </Style>
+        </ListBox.ItemContainerStyle>
+    </ListBox>
+</Popup>
